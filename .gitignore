@@ -1,0 +1,4 @@
+.vscode
+build
+.vscode/arduino.json
+report/media/TellMeSomethingDemo.mov
