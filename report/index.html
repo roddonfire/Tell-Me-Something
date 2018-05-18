@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+<title>Tell Me Something I Should Know</title>
+
+<xmp theme="united" style="display:none;">
+
+# Overview
+
+The goal of our project is to open up all of the ESP32 system's functionality to a web-based interface, ultimately allowing users to control the device from anywhere. We try to allow the user the freedom to use the ESP32 as they see fit, from wherever they may be no matter how far from the device that is. One very real possibility for its use is as a home monitor: the temperature sensor, motion sensor, microphone, and ultrasonic sensor form a potent combination in empowering all kinds of data collection scenarios.
+
+Below is a video of the system working. Imagine the possibilities; they are practically endless.
+
+<center>
+    <iframe width="854" height="480" src="https://www.youtube.com/embed/RI10abOXqAU" frameborder="0" allow="autoplay; encrypted-media"
+      allowfullscreen></iframe>
+</center>
+
+
+
+<br>
+
+
+
+This block diagram shows how the different components work together to provide one smooth experience for the user. The work involved in making this happen can generally be broken down to device-side and server-side work, hence the organization of the report.
+
+<center>
+  <img src="./media/block_diagram.png" width="700" />
+</center>
+<center>
+  *Figure 1: System block diagram*
+</center>
+
+
+
+
+# Server Side
+
+## Website
+
+The front end development of this project consisted of both website development and request handler on the server side. This was one of the challenges our team overcame, since none of us had any prior web development experience. We used HTML, Javascript, and CSS to build the website. The website has two main user functionalities - "Tell Me" and "Update Me". Our code has error checking on both ends, and we made a python request handler to process the requests and deliver the results.
+
+When the user wants a measurement to be taken, they must select an ESP, select a sensor, choose the measurement they want taken, and enter in the appropriate parameter values depending on their selection. The website dynamically updates the measurement options whenever a sensor is selected/changed. Some measurements require two parameters, some require one and others don't require any. The website dynamically controls the visibility of the boxes based on what measurement is selected.  Additionally, the placeholder text of those boxes updates dynamically making the website user-friendly and giving more clarification to the user as to the values that we need (see Figures 2 and 3). We implemented an error checking function to make sure that the user provided all these values when clicking "Tell Me". Not only does our function catch any values that are missing, but it catches if the user enters in the wrong type of value or a value that is out of range (see Figures 2 and 3 below). If any value is invalid, an alert pops up on the screen telling the user what is wrong, and the request form does not submit. Once the user properly submits a valid "Tell Me" request, the url is updated and submitted, and our server side code handles their request.
+
+<center>
+  <img src="./media/dynamicAndInvalid.png" width="700"/>
+</center>
+<center>
+  *Figure 2: The measurement options update dynamically and the website catches the user's error of an incorrect value. *
+<br><br>
+
+</center>
+
+<center>
+  <img src="./media/timeOver5.png" width="700"/>
+</center>
+<center>
+  *Figure 3: The website dynamically controls the visibility of the text boxes and catches the user's error of a value out of range. *
+
+
+</center>
+
+<br><br>
+The server also has its own error checking methods to double check the website's error checking and to eliminate the ability for users to work around the website and enter invalid requests using Postman. Given that the request is valid, the server code then parses the url to format the request (see Figure 4), and translates it into commands that back end can understand (see Figure 5). The server then communicates that command with the database, which triggers the physical device to take a measurement and POST the results into the database. This back-end implementation is further described later in our write up.
+
+<center>
+  <img src="./media/tellMeURL.png" width="1300"/>
+</center>
+<center>
+  *Figure 4: The URL that is parsed in the request handler for a "Tell Me" request. *
+<br>
+<br>
+
+</center>
+
+<center>
+  <img src="./media/commands.png" width="600"/>
+</center>
+<center>
+  *Figure 5: The commands that the URL is translated into.*
+<br>
+<br>
+
+</center>
+
+When the user clicks the "Update Me" button, the python request handler sends a GET request to the database asking it for the results (see Figure 6). When it receives the result, the python request handler formats the data appropriately in the form of HTML syntax, and converts it into a string (see Figure 7). This string is returned using the Python string method replace(), and replaces a comment in the HTML code with the actual code for the table containing all the data inside. As a result, the user can see the values that were measured. In the case of a sound recording request, the user can listen to the audio that was recorded (see Figure 8). This process is described in detail further below in our report.
+
+</center>
+
+<center>
+  <img src="./media/updateMeURL.png" width="700"/>
+</center>
+<center>
+  *Figure 6: The URL that is parsed in the request handler for an "Update Me" request.*
+<br><br><br>
+
+</center>
+
+<center>
+  <img src="./media/htmlStringConversion.png" width="600"/>
+</center>
+<center>
+  *Figure 7: The request handler formats the results and returns it in the form of HTML.*
+  <br><br>
+
+</center>
+
+<center>
+  <img src="./media/tableResults.png" width="800"/>
+</center>
+<center>
+
+  *Figure 8: The website displaying the results in the table.*
+
+
+</center>
+
+### Communication between Website and Database
+
+When the user clicks the "Tell Me!" button, the HTML form sends a GET request to its own URL. The request_handler method then recieves a GET request, and is charged with sending the instructions from the user's choices to the database. But doing that requires some parsing, because due to a limitation of the HTML form it is impossible to specify the body of the GET request in the way we would like. So to handle that, we put an intermediate "parser," which takes the HTML form style request and translates it into ESP-friendly instructions, as described in the Communications Standards section below. All that really entails is lots of if-else statements, and careful attention to detail and the interface between the two different standards. For a look at this code, see Figure 5.
+
+### Displaying Audio Data
+
+One major user interface problem we had was how to handle displaying the audio data recorded on the ESP32. The data is sent up in base64-encoded format (which is why the ESP needs to use JSON for the POST request, by the way; if it uses the x-www-forms-urlencoded format, the ```'+' ```characters in the base64 get changed to ```' '``` and the data is corrupted), and so it is stored in the central database as a string. Just showing that string to the user is clearly a bad experience, as shown below.
+<center>
+  <img src="./media/base64.png" width="600"/>
+</center>
+<center>
+  *Figure 9: Raw base64 audio data in the UI, before implementing the audio player*
+
+
+</center>
+
+<br>
+To go from the raw base64 data to a nice audio player required several intermediate steps. First, on the ESP side, we changed the compression from mu-law compression to a simple linear compression, to make decoding easier. Second, we used the built-in [Python base64 library](https://docs.python.org/3.6/library/base64.html#base64.b64decode) to decode the string into an array of integers. We then passed that array into a NumPy array, then used a [SciPy library](https://docs.scipy.org/doc/scipy/reference/generated/scipy.io.wavfile.write.html) to change that array of integers to a .wav file. We then saved that .wav file on the server, and then used the same python base64 library to read it out as a base64 encoded string. We then injected that string into the HTML, which allowed it to be played in an audio player nicely, as shown below. The code for all this is displayed in Figure 7.
+<center>
+  <img src="./media/audio_player.png" width="500" />
+</center>
+<center>
+  *Figure 10: Audio players implemented in the UI*
+
+
+</center>
+
+<br>
+The obvious question is why not just put the original base64 straight into the browser? Unfortunately, browsers can only decode base64 if it is in a recognizable audio file format, such as .wav, .mp3, or .ogg, so it would not work with raw base64, requiring all these intermediary steps instead.
+
+
+
+## Central Database
+
+The central database is what connects the website to the ESPs, allowing the user to communicate with the devices in their home and vice versa. The database keeps track of all the past and current requests sent from the website as well as the results obtained from the ESPs. When the user enters a request on the website, a new row is added to the database containing the specific request and the time it was made. Then, the specified ESP fetches this request from the server, makes appropriate measurements, and modifies this row in the database to add the result and the time when the request was completed. Each request also has a unique request ID number, so that the ESP can post results to the correct row in the database.
+
+The database has eight columns to keep track of the request ID number, the specified ESP (the user chooses this on the website), the sensor/instrument which needs to complete some action, the specific instruction, the result, the time when the request was made, whether the request is complete, and the time when the request was completed. Until the request is completed by the ESP, the 'completed' column contains a 0 and the 'completed time' column contains None. When the ESP returns a result, the 'completed' column is changed to a 1 and the time is recorded in the 'completed time' column.
+
+<center>
+  <img src="./media/database_standards.png" width="800" />
+</center>
+<center>
+  *Figure 11: Standards for how the database is formatted*
+
+
+</center>
+
+
+###Error Checking
+
+In addition to the error checking on the website, the database code also checks for errors before adding a new request to the database. This provides an added layer of protection, catching errors that might slip through the website's error checking. It also prevents someone from circumventing the website and posting invalid requests using a service such as Postman. The purpose of this extensive error checking is to make the ESP's job as straightforward as possible. Every request in the database should be easy for the ESP to parse and act on; if the request is not able to be understood by the ESP, it will not be put in the database.
+
+The database's server side error checking accounts for many possible errors, in an effort to weed out any invalid request. It first checks to make sure the request specifies a valid sensor. If a valid sensor is specified, it then checks to see if the category and specific requests are valid (category/request options are listed in Communication Standards). Within  each specific request, it checks to see if enough parameters are included, as well as whether these parameters are valid. For example, when requesting the average acceleration, the user must specify both an axis and a time duration. If either of these are missing, an error message is returned. Further, the axis must be either 'x','y','z', or 'all'. If the user enters some other string for the axis parameter (say they request the 'q' axis), an error message will ask the user to specify a valid axis. If a Postman request tells the MIC to get the current temperature, an error message will specify what functionality the MIC has (hint: it can't measure the temperature). This layer of error checking reinforces the website's error checking and prevents fake requests from entering the database, and in either case, returns a detailed error message to the user.
+
+<center>
+  <img src="./media/error_message.png" width="900" />
+</center>
+<center>
+  *Figure 12: Example error message: returns the request path along with valid request options*
+
+
+</center>
+
+
+
+
+
+
+# Device Side
+
+### Additional Hardware
+
+The only hardware we added to our ESP32 was an ultrasonic sensor, capable of measuring distances between about 2cm and 1m. To connect the sensor required 4 wires: 2 to the ESP, one to +5V, and 1 to ground. We wired the TRIG pin to ESP pin IO4, and the ECHO pin to ESP pin IO19. There was an issue with the +5V that we noted in our conclusion.
+
+<center>
+  <img src="./media/ultrasonic_sensor.jpg" width="250" />
+</center>
+<center>
+  *Figure 13: Ultrasonic sensor HC-SR04 we added to our ESP32 systems*
+
+
+</center>
+
+### System Design
+The system on the ESP32 was designed as a state machine. At the heart of the state machine is repeating GET requests to the server. If there were any new instructions for the ESP, they would be sent down in the format explained below. Based on what sensor the instructions referred to, the state would change, and the ESP would parse the instructions (again based on the format explained below) before calling a library to complete the requested functionality, then POSTing the results up to the server again. There was a library for each sensor/state, with methods to carry out all of the functionalities enumerated below. The idea was that the main file could call the method and the clean, user-friendly output would be returned.
+
+<center>
+  <img src="./media/state_machine.png" width="700" />
+</center>
+<center>
+  *Figure 14: System state machine diagram*
+
+
+</center>
+
+<br>
+
+ Also, we condensed the functionality for connecting to the server and performing GET/POST requests into a library, to avoid repeating code with lots of little technicalities that could easily go wrong. So ultimately, the main body of the code only handled general program flow and instruction parsing.
+
+ Parsing was one of the main challenges, but it was made easier by the consistent instruction format. The general process was the same: break up the instructions by the '$ character separating different fields, then parse those different fields based on the formats laid out below. In general, maintaining consistent standards for information flow between different components of the system was one of the main keys to making all the component work well together when we combined them.
+
+### Library Designs and Descriptions
+
+#### OurServer
+
+This library handles the connection to the server, making POST and GET requests as easy as calling a method, rather than handling many different ``` Client.print() ``` methods.
+
+* ```OurServer(String host, String path, String sensor, String instruction, int request_id, int esp_id)```
+
+  * Constructor; host defaults to ```"iesc-s1.mit.edu"```, path is every part of the URL except the .py file name (e.g. ```"/608dev/sandbox/adchurch/final"```), sensor is the variable where the sensor to use is stored, instruction is the variable where the instructions for that sensor are stored, request_id is the variable where that is stored, esp_id is the hardcoded id for this ESP
+
+  * Sensor, request_id, and instruction are passed by reference, so the values will be stored in the variable you pass in
+
+
+* ```void start_wifi(String network)```
+
+  * Use this to connect to an open network
+
+
+* ```void start_wifi(String network, String password)```
+
+  * Connects to WiFi, using the given network and password (e.g. 6s08 and iesc6s08)
+
+
+* ```bool get_instructions(String py_file)```
+
+  * Looks for instructions for the given ESP ID; returns true if there are instructions (and puts the appropriate sensor and instructions in the correct variables), returns false otherwise. Does this at the given .py file (e.g. ```"database.py"```)
+
+
+* ```void post_result(String
+py_file, String result)```
+
+  * POSTs the (human-readable) string describing the result to the server, at the given .py file string
+
+#### LED
+Allows access to LED plugged in to any of the LDO ports on the ADP5350 board.
+
+* ```LED(ADP5350 adp, int ldo, int loop_speed)```
+
+  * Constructor; int ldo refers to the LDO port the LED is wired to on the breadboard
+
+
+* ```String set(bool val)```
+
+  * Turns the LED on if true, off if false
+
+
+* ```String flash(bool flashing, int speed)```
+
+  * Sets up the LED to flash if flashing is true; otherwise, turns the LED off.
+
+
+* ```void update()```
+
+  * If the LED is supposed to be flashing, this method will turn it on/off if it has been long enough, determined based on the loop_speed passed in the constructor (assuming this method is called every time the loop runs)
+
+
+#### IMU
+Opens up all the functionality (except the compass) of the MPU9255 IMU unit.
+
+* ```IMU(MPU9255 &imu)```
+
+  * Constructor; passes a reference to the IMU class
+
+
+* ```String getAccel(int duration,
+String axis)```
+
+  * Gets the acceleration on the given axis (can be x, y, z, or all). If duration is 0, gets single reading;otherwise, gets average reading
+
+
+* ```String getGyro(int duration, String axis)```
+
+  * Gets the angular speed, with the same behavior as the getAccel method
+
+
+* ```String getTemp(int duration)```
+
+  * Gets the temperature, same duration behavior as above
+
+
+#### MIC
+Records and encodes audio in base64.
+
+* ```MIC(String &mic_result)```
+
+  * Constructor; passes a reference to a string with a large amount of memory reserved, to avoid difficulty with the result string being far too long and being dropped
+
+
+* ```void record(int duration)```
+
+  * Records audio and encodes it in base64.
+
+
+#### USS
+Measures the distance to the closest object from the HC-SR04 Ultrasonic sensor by sending out a 40KHz ultrasonic wave.
+
+* ```USS()```
+
+    * Constructor; Initializes the pins attached to sensor and other class variables
+
+
+* ```String getDistance()```
+
+    * Gets the distance between the sensor and the closest object that obstructs the emitted wave
+
+
+* ```String getAvgDistance(int AvgTime)```
+
+    * Returns the average of the distance measurements made over the given time interval.
+
+
+#### BAT
+Allows users to see the voltage level of the battery.
+
+* ```BAT(ADP5350 &adp)```
+
+    * Constructor; passes a reference to the ADP5350 object, sets up ADP5350 and makes it available for future voltage readings
+
+
+* ```String getVoltage()```
+
+    * Returns the current voltage being supplied by the battery
+
+
+#### GPS
+Opens up all the functionality of the GPS unit.
+
+* ```GPS(ADP5350 &adp, Hardware Serial &gps)```
+
+    * Constructor; passes a reference to the needed objects to initialize the GPS unit.
+
+
+* ```String Connected(HardwareSerial &gps)```
+
+    * Lets us know if we have a good connection established with the satellite
+
+
+* ```String getSatelliteCount(HardwareSerial &gps)```
+
+    * Provides total number of satellites in view for the GPS unit. This is based on the row starting with "GPGSV" from the data provided by the GPS unit.
+
+
+* ```String getLocation(HardwareSerial &gps)```
+
+    * Returns the latitude and longitude degree coordinates of the location of the ESP32
+
+
+* ```String getTime(HardwareSerial &gps)```
+
+    * Returns the current UTC time provided by the satellite
+
+
+#### SLEEP
+Sets the ESP32 into a deep sleep mode to conserve battery power.
+
+* ```void sleepNow(int seconds)```
+
+    * Places the ESP32 into deep sleep for the specified number of seconds
+
+### Parsing the Instructions from the Server
+
+When the main Arduino loop gets an instruction from the GET request to the server, the parsing functions are invoked to parse the instruction into a category, followed by the request name and any parameters for the request. These fields in the instruction are separated by the "$" character. Some of these fields are optional depending on the request. The first parameter determines the sensor/device, and the request is the action to be taken by the sensor. There is one parse function for each sensor: ```parse_BAT()```, ```parse_USS()```, ```parse_OFF()```, ```parse_MIC()```, ```parse_GPS()```, ```parse_IMU()```, ```parse_LED()```. Each of these parse functions determines the request and executes the appropriate library function associated with that request. The parse functions return the resulting string to the server via a POST. The POST request handler on the server then updates the database with the results. The instruction format for all requests and associated database entries are standardized. These standard formats are essential when multiple people are working on various parts of the system. The specific instruction format is detailed further below in Communcation Standards.
+
+
+### Power Considerations
+
+Originally the only power consideration was allowing the users to sleep the ESP for some number of minutes that they specify. However, requiring the user to think about the power saving functionality alone is a bad design, because it puts the onus on them to think about their device lasting. Obviously that is not ideal, because it puts stress on the user when the entire idea of the system is to save them stress and allow them *more* peace of mind.
+
+However, there was a balance we had to consider, between letting the device last as long as possible and giving the user the fastest possible response to their queries. The balance we struck was a staged system. In its most power-consuming state, the ESP makes GET requests every 3 seconds. After 5 minutes with no requests, the ESP will move into a medium-power mode, where it turns off the WiFi for 30-second bursts and only does a single GET request each time the WiFi turns on. After 60 minutes with no request in that state, the ESP moves into a low-power mode. In this mode, the ESP goes into deep sleep for 10 minutes, then wakes up and performs a single GET request before sleeping again. At any point in these lower-power modes, if the ESP receives an instruction from the server in response to one of its GET requests, it moves back to the high power state and the timers reset.
+
+The implementation was fairly simple for this: we had one counter for the main body and light sleep, which we used for tracking the time between GET requests. Then we had a second counter which started upon entering the medium-power state and indicated when it was time to transition to the lowest power mode.
+
+When using the ESP without the power saving, it lasts for about **3 hours and 15 minutes**. With the power savings implemented, the ESP lasts for **6 hours and 34 minutes**, an increase of over 100%! However, this falls a bit short of our ultimate goal of 8 hours, about the length of an average workday. Perhaps with more aggressive sleeping this would be possible, but at that point the quality of user experience might start to decline. One note: to test this, we made periodic GET requests to a second script to track when the ESP was still alive. This means the time estimates are likely small underestimates, but they should still be relationally accurate.
+
+
+
+
+
+# Communications Standards
+
+As mentioned above, we avoided much of the headache that would normally come with merging code by establishing a set of standards. These were essentially communication protocols between different components of the system, that would allow us to work in parallel and ensure that the different components would work well together.
+
+The first step was deciding on a uniform set of functionalities we were giving the user. Between the 7 components we were giving web-based users access to, there were lots of choices, so settling on one set was essential.
+
+### Component-Specific Instructions and Formatting
+
+These standards lay out how to format a simple string that will carry all the instructions from a user's request to the ESP32 to be carried out. The actions a particular sensor can do are organized first into categories, then specific requests, then parameters for that request. On the website, this would be two dropdowns and then a text box. Those actions can generally be written as follows in a string: ```"{category}${request}${parameter1},{parameter2}"```.
+
+
+#### IMU:
+
+* Category: "accel"
+
+  * Request: single ("single")
+
+    * Parameter: axis (can be "x", "y", "z", or "all")
+
+  * Request: average ("avg")
+
+    * Parameter 1: axis (can be "x", "y", "z", or "all")
+
+    * Parameter 2: time (in seconds, e.g. "6" for average over 6 seconds)
+
+* Category: "gyro"
+
+  * Request: single ("single")
+
+    * Parameter: axis (can be "x", "y", "z", or "all")
+
+  * Request: average ("avg")
+
+    * Parameter 1: axis (can be "x", "y", "z", or "all")
+
+    * Parameter 2: time (in seconds, e.g. "6" for average over 6 seconds)
+
+* Category: "temp"
+
+  * Request: single ("single")
+
+  * Request: average ("avg")
+
+    * Parameter 1: time (in seconds, e.g. "6" for average over 6 seconds)
+
+Example strings: ```"accel$single$z"``` to get the current acceleration on the z axis; ```"gyro$avg$all,11"``` to get the average angular velocity on all axes over 11 seconds
+
+
+#### MIC:
+
+* Category: since there is only one possibility, skip this part
+
+  * Request: record "rec" Parameter: time (e.g. "3" for 3 seconds; max of 5 seconds)
+
+Example string: ```"rec$3"``` to record 3 seconds of audio
+
+
+#### GPS:
+
+* Category: status of the GPS module ("status")
+
+  * Request: connected? ("con") (no parameters)
+
+  * Request: number of satellites currently connected ("sat") (no parameters)
+
+* Category: location ("loc")
+
+  * Request: none necessary (no parameters either)
+
+* Category: time
+
+Example strings: ```"loc"``` to get current location, ```"status$sat"``` to see how many satellites are currently in view
+
+
+#### USS:
+
+* Category: since there is only one possibility, skip this part
+
+  * Request: single ("single") (no parameters)
+
+  * Request: average ("avg") Parameter: time (in seconds, e.g. "4" for 4 seconds)
+
+#### LED:
+
+* Category: set ("set")
+
+  * Request: turn on ("1") (no parameters)
+
+  * Request: turn off ("0") (no parameters)
+
+* Category: flash ("flash")
+
+  * Request: start flashing ("1")
+
+    * Parameter: speed, the number of seconds the light is on/off for ("5", for 5 second intervals)
+
+  * Request: stop flashing ("0") (no parameters)
+
+Example strings: ```"set$1"``` to turn
+on LED; ```"flash$1$5"``` to flash the light every 5 seconds
+
+
+#### BAT:
+
+* Category: since there is only one possibility (status), skip this part
+
+  * Request: current voltage of battery ("volt") (no parameters)
+
+
+#### OFF:
+
+* Category: since there is only one possibility
+skip this part
+
+  * Request: sleep ("sleep")
+
+    * Parameter: time, assumed in minutes (e.g. "20" for 20 minutes)
+
+
+##Communication with the Database
+
+To communciate clearly between the website, ESPs, and database, we also need to define some standards. Here, we define standards for how the website and ESP communicate with the database using GET and POST requests, detailing the format of the requests sent to the database as well as the response to each request.
+
+
+###Website to Database Communication
+
+The website communicates with the database in two ways: sending new requests to the databse and retrieving results from completed requests.
+
+####Posting a New Request
+
+When the user enters a request on the website, a new POST request is sent to the database, sent in the 'form-data' format. A request is of the form ```{'method': 'POST', 'args': [], 'values': {}, 'is_json': False, 'form': {'esp': '3', 'update': 'F', 'sensor': 'IMU', 'instruction': 'accel$avg$x,5'}}``` and includes four pieces of information.
+
+1. 'update' - always 'F' since we are adding a new request to the database
+2. 'esp' - the number of the esp which will respond to the request
+3. 'sensor' - the sensor which is relevant to this request
+4. 'instruction' - the specific request, formatted as described above
+
+If the request passes through the error-checker, the request handler runs the command: ``'''INSERT into esp_instructions VALUES (?,?,?,?,?,?,?);''',(None, esp, sensor, instruction, '', datetime.datetime.now(), 0)``. The incomplete request is now entered in the database, so that the ESP can fetch and act on this request.
+
+Database columns are updated as follows:
+
+* 'request_id' - auto-increments
+* 'esp_id', 'sensor', 'instruction' - from the POST request
+* 'result' - initialized to an empty string
+* 'request_time' - current time, from the python datetime library
+* 'completed' - initialized to 0
+* 'completed_time' - initialized to None
+
+
+####Retrieving all Completed Requests
+
+When the user presses 'Update Me!', the website sends a GET request to the databse, retrieving all completed requests.
+
+The request is of the form: ```{'args': [], 'method': 'GET', 'values': {}}```
+
+The request handler runs the command: ``'''SELECT * FROM esp_instructions WHERE completed = 1;'''``
+
+The website updates its table to show all completed requests with results, providing the user up to date information about what is going on in their home.
+
+
+
+
+###ESP to Database Communication
+
+The ESP communicates with the database in two ways: retrieving incomplete requests and posting the results of a completed request.
+
+####Fetching Incomplete Requests
+
+Each ESP periodically sends GET requests to the database to check for new requests. A request is of the form ``{'method': 'GET', 'values': {'esp': '4'}, 'args': ['esp']}``
+
+The request handler runs the command ``'''SELECT * FROM esp_instructions WHERE esp_id = ? AND completed = 0 ORDER BY request_time DESC;''', (esp,)).fetchone()``, selecting the most recent incomplete request for that specific ESP number.
+
+The GET request response sent to the ESP is a string, which holds 3 pieces of information: the request_id of the request to carry out, the sensor, and the instruction(s). This is sent in the following format: ```"{request_id}~{sensor}~{instruction}"```. The tilde (~) is used to separate the 3 values because it's easy to parse on the ESP. An example of how this would look: ```"123~LED~flash$1$5"```.
+
+
+####Posting Results
+
+After the ESP has made a measurement, it sends a POST request to the database containing the results. We use the JSON format for data, in the format ```{"update": "[value]", "request_id": "[value]", "result": "[value]"}```. In this case, the ESP includes 3 pieces of information in the body of the POST request:
+
+1. 'update' - always 'T' since we are updating an existing request
+2. 'request_id' - the ID number of the request that the ESP just completed
+3. 'result' - a user-readable string describing the results or measurements obtained by the ESP
+
+The request handler runs the command: ``'''UPDATE esp_instructions SET result = ?, completed = ?, completed_time = ? WHERE request_id = ? ;''', (result, 1, datetime.datetime.now(), request_num)``
+
+Database columns are updated as follows:
+
+* 'result' - from the POST request
+* 'completed' - set to 1
+* 'completed_time' - current time, from the python datetime library
+
+# Conclusions
+
+On the front end, one flaw in our design is the way we load the results into the table. In order to avoid getting a blank table when we submitted a "Tell Me" request and when we loaded the page for the first time, we had the python request handler get every single entry from the database and reload it into the table each time the page was loaded or a "Tell Me" or "Update Me" request was submitted. Although the user only notices the addition of a few rows when they click "Update Me", in the code, we are getting every single entry from scratch, which takes O(n) runtime, and we don't have a limit on the number of entries that can be displayed. In a future update of this project, we could re-design our code to store the time of the last "Update Me" request, keep all the entries in the table from before, and only add the new values since our last update.
+
+There are many improvements we would love to make in future iterations of this project, given more time and/or funding. One constraint we ran into is that our microphone can only record up to 5 seconds of audio due to limitations with the ESP's memory; one possible workaround we didn't explore was finding ways to periodically upload audio to the server as the microphone records, so that it could record for longer even with its memory constraint. Another constraint is that the ultrasonic sensor requires 5 Volts, whereas our battery only provides 3.3 Volts, so the ultrasonic sensor can only run while the micro USB is plugged in and powering the ESP. Ideally we would obtain an ultrasonic sensor using 3.3 Volt logic levels, so it could run off battery power like the rest of the components do. Additionally, since the LED and GPS are both powered through LD03, the LED must be powered on for the GPS to make measurements. We would like to experiment rewiring the circuit so that one of these components is powered by LD01 or LD02, eliminating this dependency.
+
+Another issue we occasionally ran into is that if the ESP did not know how to act on a request, the system got stuck. For instance, if someone requested the LED to flash on an interval of 0 seconds, the ESP had a division by zero error and could not proceed with the request. The ESP was then unable to move on to the next request, since it was unable to complete the current request. This issue came up very occasionally, due to the rather extensive error checking on both the website and database codes. However, when we did run into this issue, we had to manually delete this request from the database. In the future, it would be good to also add some sort of error checking on the ESP, so that if the ESP can't act on a request, it sends some sort of error message back up to the server and then moves on to the next request.
+
+We could also make two very simple adjustments to the website. In the request table on the website, we could add a column displaying the ESP number (in reality this would be a specific room in someone's house) so the user can remember which ESP they requested information from. Additionally, since the database keeps track of the time both when a request is made and when it is completed, we could track average response time for each ESP and display this information on the website.
+
+Our main goal for future iterations of this project is to do more high level analysis of the request responses. Right now the user can say, "Record 5 seconds of audio in the living room" or ask, "What is the temperature in my kitchen?". In the future, we want the user to be able to ask, "Is the door open?" or "Is someone in my house?". There are many tools we could use to move the project forward in this direction, but overall we think machine learning would be an extremely useful tool for this high level analysis. The server could use cross-correlation to recognize familiar sounds such as footsteps or a door shutting. It could learn to recognize that a changing temperature along with air flow could be a sign of an open door. We could train the system using various scenarios that are likely to occur in someone's house, until the system had enough practice to identify unknown scenarious with some level of success. This would make our system incredibly valuable to the user, since they could ask almost anything about the status of their home, and the system could use its own knowledge along with data recorded on the ESP to provide the user with the information they need.
+
+#Meet the Team!
+
+<center>
+  <img src="./media/squad_selfie.png" width="500" />
+</center>
+<center>
+  *From left to right: Amanda Horne, Andrew Churchill, Sridevi Kaza, Sara Nicholas*
+
+
+</center>
+<br>
+#Github Link
+https://github.mit.edu/ahorne/Tell-Me-Something
+
+</xmp>
+
+<script src="http://strapdownjs.com/v/0.2/strapdown.js"></script>
+<body>
+
+</body>
+</html>
