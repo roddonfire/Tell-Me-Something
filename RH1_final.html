@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tell Me Something!</title>
+<link rel="stylesheet" href="__HOME__/finalProject/css/ex.css" type="text/css"/>
+<style type="text/css">
+
+	body {
+		font: 14px/1.3 helvetica;
+		background-image: url("http://wlpapers.com/images/light-blue-background-1.jpg");
+		}
+	h1 {
+		font-size:1.7em;
+		margin: 1em 0 1.4em;
+		}
+	a:link {
+		color:#33c;
+		}
+	a:visited {
+		color:#339;
+		}
+	ul {
+		margin:1.4em 0 2em;
+		}
+	ul li {
+		margin-bottom:.8em;
+		}
+		
+	#pNote {
+		color: rgb(220, 0, 0);
+	}
+	
+	form.optionsForm {
+		margin: 2em 0 3em;
+	}
+
+	form.optionsForm select {
+		vertical-align: top;
+		margin-right: 1em;
+	}
+
+	select#options {
+		min-width: 140px;
+	}
+	
+	table, th, td {
+		border: 1px solid black;
+		font-size: 1.2em;
+	}
+	
+	h2 {
+		font-size: 3.2em;
+	}
+		
+	h3 {
+		text-decoration: underline;
+		font-size: 1.7em;
+	}
+	p5 {
+		font-size: 1.7em;
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+	p1 {
+		font-size: 1.4em;
+	}
+	
+	p2 {
+		font-size: 1.6em;
+	}
+</style>
+</head>
+		
+<body>
+<i>	
+<h2 align="center">Tell Me Something!</h2>
+</i>
+<center>
+<h1>Developers: Andrew Churchill, Amanda Horne, Sara Nicholas, Dev Kaza</h1>
+<p1>
+The goal of our project is to open up all the ESP32 system’s functionality to a web-based interface, ultimately allowing users to control (and even code for) the device from anywhere. Our project will have multiple different components such as the GPS, microphone, ultrasonic sensor, and IMU, and be able obtain different measurements via those components. Then, we will have a server side python script connecting the web interface with the ESP32 and all its sensors. Our end goal in mind is for users to be able to turn their ESP32 device on at home, lets say before they go to work, and then from a remote location make measurements with that device, from work for example. Our device would then give them the power (literally and figuratively) to ask questions such as “what’s the temperature in my home?” or “is the door open?”  or even better, “turn on intruder alert” that would activate the microphone and have it detect whether there were footsteps in the home and alert the user if there was. Once we accomplish our goal with these 4 sensors, we (or anyone else, if we make it open source) can add different components to the device and follow the same standards of programming as we used in our original 4 components. The possibilities are endless given all the sensors that are out there, and it will make the stress of worrying about what’s happening in your home go away.<br>
+</p1>
+</center>
+			
+<h3 align="left">Instructions</h3>
+<p2>
+
+1) Select an ESP from the first drop-down menu.<br>
+2) Select a Sensor from the second drop-down menu.<br>
+3) Select the measurement you want taken from the options box.<br>
+4) Enter in the value specifications in the appropriate boxes (if applicable).<br>
+<br>
+<br>
+</p2>
+			
+			
+			
+<form id="optionsForm" name="requestForm" action="/608dev/sandbox/ahorne/finalProject/request_handler1_final.py" if onsubmit="return validationCheck()">
+	<p5>
+	Make a Request:
+	</p5>
+	<p5>
+	</p5>
+	<select required id="ESP" name="ESPNum" style="width: 180px; font-size: 20px;">
+		<option value="SelectAnESP" disabled selected>Select an ESP</option>
+		<option value="1">ESP 1</option>
+	  	<option value="2">ESP 2</option>
+	  	<option value="3">ESP 3</option>
+	  	<option value="4">ESP 4</option>
+	</select>
+	<p5>
+	</p5>
+	<p5>
+	</p5>
+	<select required id="Sensor" name="RequestOption" style="width: 180px; font-size: 20px;">
+		<option value="SelectASensor" disabled selected>Select a Sensor</option>
+		<option value="IMU">IMU</option>
+	  	<option value="MIC">Microphone</option>
+	  	<option value="GPS">GPS</option>
+	  	<option value="USS">UltraSonic</option>
+		<option value="LED">LED</option>
+		<option value="BAT">Battery</option>
+		<option value="OFF">Off</option>
+		
+	</select>
+	<p5>
+	</p5>	
+	<p5>
+	</p5>
+	
+	<select name="options[]" id="options" size = "9" onchange="BoxesVisible()" style="width: 320px; font-size: 15px;">
+	<!-- js populates -->
+	</select>
+	
+		
+	<p5>
+	</p5>	
+	
+	<input id="P1" type="text" name="Parameter1" placeholder="Value1" style="width: 180px; font-size: 16px;"/>
+	<p5>
+	</p5>
+	
+	<input id="P2" type="text" name="Parameter2" placeholder="Value2" style="width: 180px; font-size: 16px;"/>
+	<p5>
+	</p5>
+	
+	<button type="submit" name="request" style="font-size: 16px;" value="TellMe">Tell Me!</button> <br><br>
+
+	</form>
+	
+	<p id="pNote" class="note" style="visibility:hidden; font-size: 25px;"> Note: If you turn the LED off, the GPS will not work.</p>
+	
+		
+	<h3 align="center">Requests</h3>
+	
+	<form align = "center" name="updateForm" action="/608dev/sandbox/ahorne/finalProject/request_handler1_final.py" method="get">
+
+		<button name="request" type="submit" value="UpdateMe">Update Me!</button><br><br>
+							
+	</form>
+	
+	
+	<table style="width:100%" align="center">
+	  	<tr>
+			<th>Request</th>
+			<th>Date/Time</th> 
+			<th>Result</th>
+	  	</tr>
+		
+		<!--TABLE-->
+			
+	</table>
+	
+		<script>
+			
+		
+			function BoxesVisible(){
+				
+				document.getElementById("P1").value = '';
+				document.getElementById("P2").value = '';
+				oSelected = document.getElementById("options").value;
+				
+				if (oSelected == 'aSingle'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "x, y, z or all";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";	
+				document.getElementById("pNote").style.visibility = "hidden";	
+				}
+				
+				else if (oSelected == 'aAvg'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "x, y, z or all";
+				document.getElementById("P2").style.visibility="visible";
+				document.getElementById("P2").style["width"]="180px";
+				document.getElementById("P2").placeholder = "time in seconds";
+				document.getElementById("pNote").style.visibility = "hidden";	
+				}
+				
+				else if (oSelected == 'gSingle'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "x, y, z or all";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";	
+				document.getElementById("pNote").style.visibility = "hidden";	
+				}
+				
+				else if (oSelected == 'gAvg'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "x, y, z or all";
+				document.getElementById("P2").style.visibility="visible";	
+				document.getElementById("P2").style["width"]="180px";
+				document.getElementById("P2").placeholder = "time in seconds";
+				document.getElementById("pNote").style.visibility = "hidden";	
+				}
+				
+				
+				else if (oSelected == 'tAvg'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "time in seconds";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";	
+				document.getElementById("pNote").style.visibility = "hidden";	
+				}
+				
+				else if (oSelected == 'rec'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "time in seconds (max 5)";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";	
+				document.getElementById("pNote").style.visibility = "hidden";	
+				}
+				
+				else if (oSelected == 'uAvg'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "time in seconds";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";
+				document.getElementById("pNote").style.visibility = "hidden";	
+					
+				}
+				
+				else if (oSelected == 'startF'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="230px";
+				document.getElementById("P1").placeholder = "seconds in between each flash";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";	
+				document.getElementById("pNote").style.visibility = "hidden";
+					
+				}
+				
+				else if (oSelected == 'sleep'){
+				document.getElementById("P1").style.visibility="visible";
+				document.getElementById("P1").style["width"]="180px";
+				document.getElementById("P1").placeholder = "time in minutes";
+				document.getElementById("P2").style.visibility="hidden";
+				document.getElementById("P2").style["width"]="0px";
+				document.getElementById("pNote").style.visibility = "hidden";
+					
+				}
+				
+				
+				
+				else {
+					if (oSelected == 'con'){
+						document.getElementById("pNote").style.visibility = "visible";
+						
+					}
+					else if (oSelected == 'sat'){
+						document.getElementById("pNote").style.visibility = "visible";
+					}
+					
+					else if (oSelected == 'time'){
+						document.getElementById("pNote").style.visibility = "visible";	
+					}
+					else if (oSelected == 'loc'){
+						document.getElementById("pNote").style.visibility = "visible";	
+					}
+					else if (oSelected == 'tOff'){
+						document.getElementById("pNote").style.visibility = "visible";	
+					}
+					
+					else{
+						document.getElementById("pNote").style.visibility = "hidden";	
+					}
+					
+					document.getElementById("P1").style.visibility="hidden";
+					document.getElementById("P2").style.visibility="hidden";
+					document.getElementById("P1").style["width"]="0px";
+					document.getElementById("P2").style["width"]="0px";	
+					
+				}						
+			}
+			
+			function validationCheck(){
+				
+				oSelected = document.getElementById("options").value;
+				
+				var ESP = document.getElementById("ESP");
+				var OPTION = document.getElementById("Sensor");
+				var VALUE1 = document.forms["requestForm"]["Parameter1"].value;
+				var VALUE2 = document.forms["requestForm"]["Parameter2"].value;
+				if (ESP.options[ESP.selectedIndex].value == 'SelectAnESP'){
+					
+					alert("Please select an ESP.");
+					return false;
+				}
+				
+				else if (OPTION.options[OPTION.selectedIndex].value == 'SelectASensor'){
+					alert("Please select a sensor.");
+					return false;
+				}
+				
+				else if (document.getElementById("options").value == ''){
+					alert("Please select a measurement to be taken.");
+					return false;
+					
+					
+				}
+				
+				else if (oSelected == 'aSingle'){
+					
+					if ((VALUE1 != 'x') && (VALUE1 != 'y') && (VALUE1 != 'z') && (VALUE1 != 'all')){
+						alert("Please enter either 'x','y','z', or 'all' in lowercase in box 1.");
+						return false;
+					}
+				}
+				
+				else if (oSelected == 'aAvg'){
+					if ((VALUE1 != 'x') && (VALUE1 != 'y') && (VALUE1 != 'z') && (VALUE1 != 'all')){
+						alert("Please enter either 'x','y','z', or 'all' in lowercase in box 1.");
+						return false;
+					}
+					
+					if ((isNaN(VALUE2)) || (VALUE2 == "")){
+						alert("Please enter a number into box 2.");
+						return false;
+					}
+					
+				}
+				//gyroscope 
+				else if (oSelected == 'gSingle'){
+					
+					if ((VALUE1 != 'x') && (VALUE1 != 'y') && (VALUE1 != 'z') && (VALUE1 != 'all')){
+						alert("Please enter either 'x','y','z', or 'all' in lowercase in box 1.");
+						return false;
+					}
+				}
+				//gyroscope average
+				else if (oSelected == 'gAvg'){
+					if ((VALUE1 != 'x') && (VALUE1 != 'y') && (VALUE1 != 'z') && (VALUE1 != 'all')){
+						alert("Please enter either 'x','y','z', or 'all' in lowercase in box 1.");
+						return false;
+					}
+					
+					if ((isNaN(VALUE2)) || (VALUE2 == "")){
+						alert("Please enter a number into box 2.");
+						return false;
+					}
+					
+				}
+				
+				else if (oSelected == 'tAvg'){
+					if ((isNaN(VALUE1)) || (VALUE1 == "")){
+						alert("Please enter a number into box 1.");
+						return false;
+					}
+				}
+				
+				else if (oSelected == 'rec'){
+					if ((isNaN(VALUE1)) || (VALUE1 == "")){
+						alert("Please enter a number between 0 and 5 into box 1.");
+						return false;
+					}
+					if ((VALUE1 <= 0) || (VALUE1 > 5)){
+						alert("Please enter a number between 0 and 5 into box 1.");
+						return false;
+					}
+				}
+				
+				else if (oSelected == 'uAvg'){
+					if ((isNaN(VALUE1)) || (VALUE1 == "")){
+						alert("Please enter a number into box 1.");
+						return false;
+					}
+				}
+				
+				else if (oSelected == 'startF'){
+					if ((isNaN(VALUE1)) || (VALUE1 == "")){
+						alert("Please enter a number into box 1.");
+						return false;
+					}
+				}
+				
+				else if (oSelected == 'sleep'){
+					if ((isNaN(VALUE1)) || (VALUE1 == "")){
+						alert("Please enter a number into box 1.");
+						return false;
+					}
+				}
+				
+				else{
+					return true;
+				}
+					
+			}
+			
+			function removeAllOptions(sel, removeGrp) {
+				var len, groups, par;
+				if (removeGrp) {
+					groups = sel.getElementsByTagName('optgroup');
+					len = groups.length;
+					for (var i=len; i; i--) {
+						sel.removeChild( groups[i-1] );
+					}
+				}
+				
+				len = sel.options.length;
+				for (var i=len; i; i--) {
+					par = sel.options[i-1].parentNode;
+					par.removeChild( sel.options[i-1] );
+				}
+			}
+			
+			function appendDataToSelect(sel, obj) {
+				var f = document.createDocumentFragment();
+				var labels = [], group, opts;
+				
+				function addOptions(obj) {
+					var f = document.createDocumentFragment();
+					var o;
+					
+					for (var i=0, len=obj.text.length; i<len; i++) {
+						o = document.createElement('option');
+						o.appendChild( document.createTextNode( obj.text[i] ) );
+						
+						if ( obj.value ) {
+							o.value = obj.value[i];
+						}
+						
+						f.appendChild(o);
+					}
+					return f;
+				}
+				
+				if ( obj.text ) {
+					opts = addOptions(obj);
+					f.appendChild(opts);
+				} else {
+					for ( var prop in obj ) {
+						if ( obj.hasOwnProperty(prop) ) {
+							labels.push(prop);
+						}
+					}
+					
+					for (var i=0, len=labels.length; i<len; i++) {
+						group = document.createElement('optgroup');
+						group.label = labels[i];
+						f.appendChild(group);
+						opts = addOptions(obj[ labels[i] ] );
+						group.appendChild(opts);
+					}
+				}
+				sel.appendChild(f);
+			}
+			// anonymous function assigned to onchange event of controlling select list
+		document.forms['optionsForm'].elements['RequestOption'].onchange = function(e){
+				// name of associated select list
+				var relName = 'options[]';
+				
+				// reference to associated select list 
+				var relList = this.form.elements[ relName ];
+				
+				// get data from object literal based on selection in controlling select list (this.value)
+				var obj = Select_List_Data[ relName ][ this.value ];
+				
+				// remove current option elements
+				removeAllOptions(relList, true);
+				
+				// call function to add optgroup/option elements
+				// pass reference to associated select list and data for new options
+				appendDataToSelect(relList, obj);
+			};
+
+			// object literal holds data for optgroup/option elements
+			var Select_List_Data = {
+				// name of associated select list
+				'options[]': {
+					
+					// names match option values in controlling select list
+					SelectASensor: {
+						text: ['Must Select A Sensor']
+					},
+					IMU: {
+						
+						'Accel': {
+							text: ['Single', 'Average'],
+							value: ['aSingle', 'aAvg']
+						},
+						'Gyro': {
+							text: ['Single', 'Average'],
+							value: ['gSingle', 'gAvg']
+						},
+						
+						'Temp': {
+							text: ['Single', 'Average'],
+							value: ['tSingle', 'tAvg']
+						}
+						
+					},
+					MIC: {
+						'Record Sound': {
+							text: ['Record'],
+							value: ['rec']
+						}
+					},
+					GPS: {
+						'Status of the GPS Module': {
+							
+							text: ['Connected?', 'Number of Satellites Currently Connected'],
+							value: ['con', 'sat']
+						},
+						
+						'Location': {
+							text: ['Get Device Location'],
+							value: ['loc']
+						},
+						
+						'Time': {
+							text: ['What time is it?'],
+							value: ['time']
+						}
+					},
+					USS: {
+						'Take Measurement': {
+							text: ['Single', 'Average'],
+							value: ['uSingle', 'uAvg']
+						}
+					},
+					LED: {
+						
+						'Set': {
+							text: ['Turn On', 'Turn Off'],
+							value: ['tOn', 'tOff']
+						},
+						'Flash': {
+							text: ['Start Flashing', 'Stop Flashing'],
+							value: ['startF', 'stopF']
+						}
+						
+					},
+					BAT: {
+
+						'Status': {
+							text: ['Current Voltage of Battery'],
+							value: ['volt']
+						}
+					},
+					OFF: {
+						'Sleep':{
+							text: ['Sleep For'],
+							value: ['sleep']
+						}
+					}
+				}
+				
+			};
+
+			// populate associated select list when page loads
+			(function() {
+				var form = document.forms['optionsForm'];
+				
+				// reference to controlling select list
+				var sel = form.elements['RequestOption'];
+				sel.selectedIndex = 0;
+				
+				// name of associated select list
+				var relName = 'options[]';
+				// reference to associated select list
+				var rel = form.elements[relName];
+				
+				// get data for associated select list passing its name
+				// and value of selected in controlling select list
+				var data = Select_List_Data[relName][sel.value];
+				
+				// add options to associated select list
+				appendDataToSelect(rel, data);
+			}());
+	
+		</script>
+			
+</body>
+</html>
